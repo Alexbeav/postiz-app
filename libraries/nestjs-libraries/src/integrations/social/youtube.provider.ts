@@ -257,7 +257,7 @@ export class YoutubeProvider extends SocialAbstract implements SocialProvider {
     id: string,
     requiredId: string,
     accessToken: string
-  ): Promise<AuthTokenDetails> {
+  ): Promise<Omit<AuthTokenDetails, 'refreshToken' | 'expiresIn'>> {
     const pages = await this.pages(accessToken);
     const findPage = pages.find((p) => p.id === requiredId);
 
@@ -273,8 +273,6 @@ export class YoutubeProvider extends SocialAbstract implements SocialProvider {
       id: information.id,
       name: information.name,
       accessToken: information.access_token,
-      refreshToken: information.access_token,
-      expiresIn: dayjs().add(59, 'days').unix() - dayjs().unix(),
       picture: information.picture,
       username: information.username,
     };
@@ -292,6 +290,11 @@ export class YoutubeProvider extends SocialAbstract implements SocialProvider {
     const youtubeClient = youtube(client);
 
     const { settings }: { settings: YoutubeSettingsDto } = firstPost;
+
+    // Handle live stream scheduling
+    if (settings.contentType === 'live_stream') {
+      return this.scheduleLiveStream(id, accessToken, firstPost, settings);
+    }
 
     const response = await axios({
       url: firstPost?.media?.[0]?.path,
@@ -347,6 +350,53 @@ export class YoutubeProvider extends SocialAbstract implements SocialProvider {
         id: firstPost.id,
         releaseURL: `https://www.youtube.com/watch?v=${all?.data?.id}`,
         postId: all?.data?.id!,
+        status: 'success',
+      },
+    ];
+  }
+
+  private async scheduleLiveStream(
+    id: string,
+    accessToken: string,
+    firstPost: PostDetails,
+    settings: YoutubeSettingsDto
+  ): Promise<PostResponse[]> {
+    const { client, youtube } = clientAndYoutube();
+    client.setCredentials({ access_token: accessToken });
+    const youtubeClient = youtube(client);
+
+    const broadcast = await youtubeClient.liveBroadcasts.insert({
+      part: ['id', 'snippet', 'status', 'contentDetails'],
+      requestBody: {
+        snippet: {
+          title: settings.title,
+          description: firstPost?.message,
+          scheduledStartTime: settings.scheduledStartTime,
+          ...(settings.scheduledEndTime && {
+            scheduledEndTime: settings.scheduledEndTime,
+          }),
+        },
+        status: {
+          privacyStatus: settings.type,
+          selfDeclaredMadeForKids: settings.selfDeclaredMadeForKids === 'yes',
+        },
+        contentDetails: {
+          enableAutoStart: settings.enableAutoStart ?? true,
+          enableAutoStop: settings.enableAutoStop ?? true,
+          enableEmbed: settings.enableEmbed ?? true,
+          recordFromStart: settings.recordFromStart ?? true,
+          latencyPreference: settings.latencyPreference ?? 'normal',
+        },
+      },
+    });
+
+    const broadcastId = broadcast.data.id!;
+
+    return [
+      {
+        id: firstPost.id,
+        releaseURL: `https://www.youtube.com/watch?v=${broadcastId}`,
+        postId: broadcastId,
         status: 'success',
       },
     ];
