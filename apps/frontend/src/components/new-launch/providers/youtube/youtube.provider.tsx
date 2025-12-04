@@ -110,13 +110,13 @@ const YoutubeSettings: FC = () => {
     </div>
   );
 };
-export default withProvider({
+export default withProvider<YoutubeSettingsDto>({
   postComment: PostComment.COMMENT,
   minimumCharacters: [],
   SettingsComponent: YoutubeSettings,
   CustomPreviewComponent: undefined,
   dto: YoutubeSettingsDto,
-  checkValidity: async (items, settings) => {
+  checkValidity: async (items, settings: YoutubeSettingsDto) => {
     // Skip video validation for live streams
     if (settings?.contentType === 'live_stream') {
       return true;

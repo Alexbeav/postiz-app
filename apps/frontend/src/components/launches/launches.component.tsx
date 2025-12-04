@@ -23,6 +23,7 @@ import { DNDProvider } from '@gitroom/frontend/components/launches/helpers/dnd.p
 import { GeneratorComponent } from './generator/generator';
 import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { NewPost } from '@gitroom/frontend/components/launches/new.post';
+import { NewNote } from '@gitroom/frontend/components/launches/new.note';
 import { useT } from '@gitroom/react/translation/get.transation.service.client';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import useCookie from 'react-use-cookie';
@@ -530,6 +531,7 @@ export const LaunchesComponent = () => {
                 user?.tier?.ai &&
                 billingEnabled && <GeneratorComponent />}
             </div>
+            <NewNote />
           </div>
           <div className="gap-[32px] flex flex-col select-none flex-1">
             {sortedIntegrations.length === 0 && collapseMenu === '0' && (

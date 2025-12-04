@@ -299,6 +299,12 @@ export class PostsService {
       return;
     }
 
+    // Notes don't need to be posted anywhere - just mark them as published
+    if (firstPost.integration?.providerIdentifier === 'note') {
+      await this._postRepository.updatePost(firstPost.id, 'note-' + firstPost.id, '');
+      return;
+    }
+
     if (firstPost.integration?.refreshNeeded) {
       await this._notificationService.inAppNotification(
         firstPost.organizationId,

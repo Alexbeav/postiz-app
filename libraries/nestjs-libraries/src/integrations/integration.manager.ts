@@ -29,6 +29,7 @@ import { VkProvider } from '@gitroom/nestjs-libraries/integrations/social/vk.pro
 import { WordpressProvider } from '@gitroom/nestjs-libraries/integrations/social/wordpress.provider';
 import { ListmonkProvider } from '@gitroom/nestjs-libraries/integrations/social/listmonk.provider';
 import { GmbProvider } from '@gitroom/nestjs-libraries/integrations/social/gmb.provider';
+import { NoteProvider } from '@gitroom/nestjs-libraries/integrations/social/note.provider';
 
 export const socialIntegrationList: SocialProvider[] = [
   new XProvider(),
@@ -58,6 +59,7 @@ export const socialIntegrationList: SocialProvider[] = [
   new HashnodeProvider(),
   new WordpressProvider(),
   new ListmonkProvider(),
+  new NoteProvider(),
   // new MastodonCustomProvider(),
 ];
 
@@ -66,15 +68,18 @@ export class IntegrationManager {
   async getAllIntegrations() {
     return {
       social: await Promise.all(
-        socialIntegrationList.map(async (p) => ({
-          name: p.name,
-          identifier: p.identifier,
-          toolTip: p.toolTip,
-          editor: p.editor,
-          isExternal: !!p.externalUrl,
-          isWeb3: !!p.isWeb3,
-          ...(p.customFields ? { customFields: await p.customFields() } : {}),
-        }))
+        socialIntegrationList
+          // Hide 'note' from regular integration list - it's internal only
+          .filter((p) => p.identifier !== 'note')
+          .map(async (p) => ({
+            name: p.name,
+            identifier: p.identifier,
+            toolTip: p.toolTip,
+            editor: p.editor,
+            isExternal: !!p.externalUrl,
+            isWeb3: !!p.isWeb3,
+            ...(p.customFields ? { customFields: await p.customFields() } : {}),
+          }))
       ),
       article: [] as any[],
     };

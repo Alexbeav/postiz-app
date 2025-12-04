@@ -597,4 +597,66 @@ export class IntegrationsController {
   async getUpdates(@Query() query: { word: string; id?: number }) {
     return new TelegramProvider().getBotId(query);
   }
+
+  /**
+   * Enable the Note integration for an organization.
+   * Notes are internal calendar entries that don't post anywhere.
+   */
+  @Post('/note/enable')
+  async enableNoteIntegration(@GetOrgFromRequest() org: Organization) {
+    const noteProvider = this._integrationManager.getSocialIntegration('note');
+    if (!noteProvider) {
+      throw new Error('Note provider not available');
+    }
+
+    // Check if note integration already exists for this org
+    const existingIntegrations =
+      await this._integrationService.getIntegrationsList(org.id);
+    const existingNote = existingIntegrations.find(
+      (i) => i.providerIdentifier === 'note'
+    );
+
+    if (existingNote) {
+      // If disabled, re-enable it
+      if (existingNote.disabled) {
+        await this._integrationService.enableChannel(
+          org.id,
+          999, // Notes don't count against channel limit
+          existingNote.id
+        );
+      }
+      return { id: existingNote.id, existing: true };
+    }
+
+    // Create the note integration
+    const authDetails = await noteProvider.authenticate({
+      code: '',
+      codeVerifier: '',
+    });
+
+    if (typeof authDetails === 'string') {
+      throw new Error('Failed to create note integration');
+    }
+
+    const integration = await this._integrationService.createOrUpdateIntegration(
+      undefined,
+      false,
+      org.id,
+      'Calendar Notes',
+      undefined,
+      'social',
+      authDetails.id,
+      'note',
+      authDetails.accessToken,
+      '',
+      0,
+      'note',
+      false,
+      undefined,
+      0,
+      undefined
+    );
+
+    return { id: integration.id, existing: false };
+  }
 }

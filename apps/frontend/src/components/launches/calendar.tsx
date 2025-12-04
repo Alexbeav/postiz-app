@@ -898,18 +898,32 @@ const CalendarItem: FC<{
         )}
       >
         <div className={clsx('relative min-w-[20px]')}>
-          <img
-            className="w-[20px] h-[20px] rounded-[8px]"
-            src={post.integration.picture! || '/no-picture.jpg'}
-          />
-          <img
-            className="w-[12px] h-[12px] rounded-[8px] absolute z-10 top-[10px] end-0 border border-fifth"
-            src={`/icons/platforms/${post.integration?.providerIdentifier}.png`}
-          />
+          {post.integration?.providerIdentifier === 'note' ? (
+            <img
+              className="w-[20px] h-[20px]"
+              src="/icons/platforms/note.svg"
+              alt="Note"
+            />
+          ) : (
+            <>
+              <img
+                className="w-[20px] h-[20px] rounded-[8px]"
+                src={post.integration.picture! || '/no-picture.jpg'}
+              />
+              <img
+                className="w-[12px] h-[12px] rounded-[8px] absolute z-10 top-[10px] end-0 border border-fifth"
+                src={`/icons/platforms/${post.integration?.providerIdentifier}.png`}
+              />
+            </>
+          )}
         </div>
         <div className="w-full flex-1 flex flex-col min-h-[40px]">
           <div className="text-start">
-            {state === 'DRAFT' ? t('draft', 'Draft') + ': ' : ''}
+            {post.integration?.providerIdentifier === 'note'
+              ? t('note', 'Note') + ': '
+              : state === 'DRAFT'
+              ? t('draft', 'Draft') + ': '
+              : ''}
           </div>
           <div className="w-full relative">
             <div className="absolute top-0 start-0 w-full text-ellipsis break-words line-clamp-1 text-left">
