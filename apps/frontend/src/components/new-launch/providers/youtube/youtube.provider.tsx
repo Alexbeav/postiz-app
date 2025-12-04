@@ -36,10 +36,34 @@ const madeForKids = [
     value: 'yes',
   },
 ];
+
+const contentTypeOptions = [
+  {
+    label: 'Video Upload',
+    value: 'video_upload',
+  },
+  {
+    label: 'Live Stream',
+    value: 'live_stream',
+  },
+];
 const YoutubeSettings: FC = () => {
-  const { register, control } = useSettings();
+  const { register, control, watch } = useSettings();
+  const contentType = watch('contentType') || 'video_upload';
   return (
     <div className="flex flex-col">
+      <Select
+        label="Content Type"
+        {...register('contentType', {
+          value: 'video_upload',
+        })}
+      >
+        {contentTypeOptions.map((t) => (
+          <option key={t.value} value={t.value}>
+            {t.label}
+          </option>
+        ))}
+      </Select>
       <Input label="Title" {...register('title')} maxLength={100} />
       <Select
         label="Type"
@@ -66,6 +90,13 @@ const YoutubeSettings: FC = () => {
         ))}
       </Select>
       <MediumTags label="Tags" {...register('tags')} />
+      {contentType === 'live_stream' && (
+        <Input
+          label="Scheduled Start Time"
+          type="datetime-local"
+          {...register('scheduledStartTime')}
+        />
+      )}
       <div className="mt-[20px]">
         <MediaComponent
           type="image"
@@ -85,7 +116,11 @@ export default withProvider({
   SettingsComponent: YoutubeSettings,
   CustomPreviewComponent: undefined,
   dto: YoutubeSettingsDto,
-  checkValidity: async (items) => {
+  checkValidity: async (items, settings) => {
+    // Skip video validation for live streams
+    if (settings?.contentType === 'live_stream') {
+      return true;
+    }
     const [firstItems] = items;
     if (items.length !== 1) {
       return 'Should have one item';
