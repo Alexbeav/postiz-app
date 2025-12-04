@@ -103,8 +103,13 @@ export class IntegrationService {
     timezone?: number,
     customInstanceDetails?: string
   ) {
+    // Skip re-uploading if the picture is already on our storage (Cloudflare CDN or local uploads)
+    const isAlreadyUploaded = picture && (
+      picture.indexOf('imagedelivery.net') > -1 ||
+      picture.indexOf('/uploads/') > -1
+    );
     const uploadedPicture = picture
-      ? picture?.indexOf('imagedelivery.net') > -1
+      ? isAlreadyUploaded
         ? picture
         : await this.storage.uploadSimple(picture)
       : undefined;

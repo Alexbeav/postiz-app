@@ -33,6 +33,7 @@ import { PostComment } from '@gitroom/frontend/components/new-launch/providers/h
 import WordpressProvider from '@gitroom/frontend/components/new-launch/providers/wordpress/wordpress.provider';
 import ListmonkProvider from '@gitroom/frontend/components/new-launch/providers/listmonk/listmonk.provider';
 import GmbProvider from '@gitroom/frontend/components/new-launch/providers/gmb/gmb.provider';
+import NoteProvider from '@gitroom/frontend/components/new-launch/providers/note/note.provider';
 
 export const Providers = [
   {
@@ -142,6 +143,10 @@ export const Providers = [
   {
     identifier: 'gmb',
     component: GmbProvider,
+  },
+  {
+    identifier: 'note',
+    component: NoteProvider,
   },
 ];
 export const ShowAllProviders = forwardRef((props, ref) => {
