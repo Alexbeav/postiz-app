@@ -77,6 +77,21 @@ export interface ISocialMediaIntegration {
     postDetails: PostDetails[],
     integration: Integration
   ): Promise<PostResponse[]>; // Schedules a new post
+
+  // Optional: Delete a post from the platform (e.g., YouTube livestream)
+  deletePost?(
+    id: string,
+    accessToken: string,
+    postId: string
+  ): Promise<{ success: boolean }>;
+
+  // Optional: Update a post on the platform (e.g., YouTube livestream)
+  updatePost?(
+    id: string,
+    accessToken: string,
+    postId: string,
+    postDetails: PostDetails
+  ): Promise<{ success: boolean }>;
 }
 
 export type PostResponse = {

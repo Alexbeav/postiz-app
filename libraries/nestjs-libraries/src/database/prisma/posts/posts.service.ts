@@ -617,6 +617,39 @@ export class PostsService {
   }
 
   async deletePost(orgId: string, group: string) {
+    // First, fetch posts before deletion to sync with external platforms
+    const postsToDelete = await this._postRepository.getPostsForDeletion(orgId, group);
+
+    // Delete from external platforms (e.g., YouTube livestreams)
+    for (const postData of postsToDelete) {
+      if (postData.releaseId && postData.settings && postData.integration) {
+        try {
+          const settings = JSON.parse(postData.settings);
+          // Check if this is a YouTube livestream
+          if (
+            postData.integration.providerIdentifier === 'youtube' &&
+            settings.contentType === 'live_stream'
+          ) {
+            const provider = this._integrationManager.getSocialIntegration(
+              postData.integration.providerIdentifier
+            );
+            // Call the provider's deletePost if it exists
+            if (provider.deletePost) {
+              await provider.deletePost(
+                postData.integration.id,
+                postData.integration.token,
+                postData.releaseId
+              );
+            }
+          }
+        } catch (e) {
+          // Log but don't fail the deletion if external API call fails
+          console.error(`Failed to delete from external platform: ${e}`);
+        }
+      }
+    }
+
+    // Soft-delete posts in the database
     const post = await this._postRepository.deletePost(orgId, group);
     if (post?.id) {
       await this._workerServiceProducer.delete('post', post.id);
@@ -633,6 +666,12 @@ export class PostsService {
   async createPost(orgId: string, body: CreatePostDto): Promise<any[]> {
     const postList = [];
     for (const post of body.posts) {
+      // Check if this is an update to an existing YouTube livestream
+      let existingLivestream: Awaited<ReturnType<typeof this._postRepository.getPostForUpdate>> | null = null;
+      if (post.group) {
+        existingLivestream = await this._postRepository.getPostForUpdate(orgId, post.group);
+      }
+
       const messages = (post.value || []).map((p) => p.content);
       const updateContent = !body.shortLink
         ? messages
@@ -654,6 +693,34 @@ export class PostsService {
           body.tags,
           body.inter
         );
+
+      // Sync updates to YouTube for published livestreams
+      if (
+        existingLivestream?.releaseId &&
+        existingLivestream?.integration?.providerIdentifier === 'youtube' &&
+        existingLivestream?.settings
+      ) {
+        try {
+          const settings = JSON.parse(existingLivestream.settings);
+          if (settings.contentType === 'live_stream') {
+            const provider = this._integrationManager.getSocialIntegration('youtube');
+            if (provider.updatePost) {
+              await provider.updatePost(
+                existingLivestream.integration.id,
+                existingLivestream.integration.token,
+                existingLivestream.releaseId,
+                {
+                  id: posts[0].id,
+                  message: updateContent[0] || '',
+                  settings: post.settings,
+                }
+              );
+            }
+          }
+        } catch (e) {
+          console.error(`Failed to update YouTube livestream: ${e}`);
+        }
+      }
 
       if (!posts?.length) {
         return [] as any[];

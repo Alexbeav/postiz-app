@@ -47,7 +47,8 @@ export type AllProvidersSettings =
   | ProviderExtension<'bluesky', None>
   | ProviderExtension<'telegram', None>
   | ProviderExtension<'nostr', None>
-  | ProviderExtension<'vk', None>;
+  | ProviderExtension<'vk', None>
+  | ProviderExtension<'note', None>;
 
 type None = NonNullable<unknown>;
 
@@ -80,6 +81,7 @@ export const allProviders = (setEmpty?: any) => {
     { value: setEmpty, name: 'telegram' },
     { value: setEmpty, name: 'nostr' },
     { value: setEmpty, name: 'vk' },
+    { value: setEmpty, name: 'note' },
   ].filter((f) => f.value);
 };
 

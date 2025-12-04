@@ -224,6 +224,54 @@ export class PostsRepository {
     }, [] as any[]);
   }
 
+  async getPostsForDeletion(orgId: string, group: string) {
+    return this._post.model.post.findMany({
+      where: {
+        organizationId: orgId,
+        group,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        releaseId: true,
+        settings: true,
+        integration: {
+          select: {
+            id: true,
+            providerIdentifier: true,
+            token: true,
+            refreshToken: true,
+          },
+        },
+      },
+    });
+  }
+
+  async getPostForUpdate(orgId: string, group: string) {
+    return this._post.model.post.findFirst({
+      where: {
+        organizationId: orgId,
+        group,
+        deletedAt: null,
+        parentPostId: null,
+      },
+      select: {
+        id: true,
+        releaseId: true,
+        settings: true,
+        content: true,
+        integration: {
+          select: {
+            id: true,
+            providerIdentifier: true,
+            token: true,
+            refreshToken: true,
+          },
+        },
+      },
+    });
+  }
+
   async deletePost(orgId: string, group: string) {
     await this._post.model.post.updateMany({
       where: {

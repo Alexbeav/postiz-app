@@ -365,15 +365,23 @@ export class YoutubeProvider extends SocialAbstract implements SocialProvider {
     client.setCredentials({ access_token: accessToken });
     const youtubeClient = youtube(client);
 
+    // Convert datetime-local format to ISO 8601 with timezone for YouTube API
+    const scheduledStartTimeISO = settings.scheduledStartTime
+      ? dayjs(settings.scheduledStartTime).toISOString()
+      : undefined;
+    const scheduledEndTimeISO = settings.scheduledEndTime
+      ? dayjs(settings.scheduledEndTime).toISOString()
+      : undefined;
+
     const broadcast = await youtubeClient.liveBroadcasts.insert({
       part: ['id', 'snippet', 'status', 'contentDetails'],
       requestBody: {
         snippet: {
           title: settings.title,
           description: firstPost?.message,
-          scheduledStartTime: settings.scheduledStartTime,
-          ...(settings.scheduledEndTime && {
-            scheduledEndTime: settings.scheduledEndTime,
+          scheduledStartTime: scheduledStartTimeISO,
+          ...(scheduledEndTimeISO && {
+            scheduledEndTime: scheduledEndTimeISO,
           }),
         },
         status: {
@@ -400,6 +408,81 @@ export class YoutubeProvider extends SocialAbstract implements SocialProvider {
         status: 'success',
       },
     ];
+  }
+
+  /**
+   * Delete a YouTube livestream broadcast
+   * Called when a livestream post is deleted from Postiz calendar
+   */
+  async deletePost(
+    id: string,
+    accessToken: string,
+    postId: string
+  ): Promise<{ success: boolean }> {
+    const { client, youtube } = clientAndYoutube();
+    client.setCredentials({ access_token: accessToken });
+    const youtubeClient = youtube(client);
+
+    try {
+      await youtubeClient.liveBroadcasts.delete({
+        id: postId,
+      });
+      return { success: true };
+    } catch (error: any) {
+      console.error(`Failed to delete YouTube livestream ${postId}:`, error.message);
+      // Don't throw - allow Postiz to delete the post even if YouTube API fails
+      return { success: false };
+    }
+  }
+
+  /**
+   * Update a YouTube livestream broadcast
+   * Called when a livestream post is edited in Postiz
+   */
+  async updatePost(
+    id: string,
+    accessToken: string,
+    postId: string,
+    postDetails: PostDetails
+  ): Promise<{ success: boolean }> {
+    const { client, youtube } = clientAndYoutube();
+    client.setCredentials({ access_token: accessToken });
+    const youtubeClient = youtube(client);
+
+    const { settings }: { settings: YoutubeSettingsDto } = postDetails;
+
+    // Convert datetime-local format to ISO 8601
+    const scheduledStartTimeISO = settings.scheduledStartTime
+      ? dayjs(settings.scheduledStartTime).toISOString()
+      : undefined;
+    const scheduledEndTimeISO = settings.scheduledEndTime
+      ? dayjs(settings.scheduledEndTime).toISOString()
+      : undefined;
+
+    try {
+      await youtubeClient.liveBroadcasts.update({
+        part: ['id', 'snippet', 'status'],
+        requestBody: {
+          id: postId,
+          snippet: {
+            title: settings.title,
+            description: postDetails?.message,
+            scheduledStartTime: scheduledStartTimeISO,
+            ...(scheduledEndTimeISO && {
+              scheduledEndTime: scheduledEndTimeISO,
+            }),
+          },
+          status: {
+            privacyStatus: settings.type,
+            selfDeclaredMadeForKids: settings.selfDeclaredMadeForKids === 'yes',
+          },
+        },
+      });
+      return { success: true };
+    } catch (error: any) {
+      console.error(`Failed to update YouTube livestream ${postId}:`, error.message);
+      return { success: false };
+    }
   }
 
   async analytics(
